@@ -1,18 +1,68 @@
 /**
  * lib/i18n/translations.ts
  * Bilingual English & Arabic dictionary for PetroProf Portal.
+ * Covers all UI text: sidebar, navigation, actions, dashboards, forms, and status messages.
  */
 
 export type Language = 'en' | 'ar'
 
 export const translations = {
   en: {
-    // Brand
+    // ── Brand ──
     brandName: 'PetroProf',
     brandTagline: 'Rope Access & Industrial Manpower Dispatch',
     brandSub: 'Saudi Arabia Industrial Services',
+    irataCompliant: 'IRATA ICOP Compliant',
+    saudiSafetyVerified: 'Saudi Industrial Safety & Height Regulations verified.',
 
-    // Navigation
+    // ── Sidebar Group Labels ──
+    platformCommand: 'Platform Command',
+    safetyAndIntelligence: 'Safety & Intelligence',
+    system: 'System',
+    dispatchOperations: 'Dispatch Operations',
+    safetyAndCompliance: 'Safety & Compliance',
+    management: 'Management',
+    clientHub: 'Client Hub',
+    safetyAndQuotes: 'Safety & Quotes',
+    organization: 'Organization',
+    technicianHub: 'Technician Hub',
+    safetyAssistant: 'Safety Assistant',
+    account: 'Account',
+
+    // ── Sidebar Nav Items ──
+    dispatchOverview: 'Dispatch Overview',
+    liveDeployments: 'Live Deployments',
+    techniciansDirectory: 'Technicians Directory',
+    clientOrganizations: 'Client Organizations',
+    jobRequestsAndQuotes: 'Job Requests & Quotes',
+    complianceTracker: 'Compliance Tracker',
+    irataAiAssistant: 'IRATA AI Assistant',
+    dynamicQuotingEngine: 'Dynamic Quoting Engine',
+    auditTrail: 'Audit Trail',
+    platformSettings: 'Platform Settings',
+    overview: 'Overview',
+    jobRequests: 'Job Requests',
+    safetyAiAdvisor: 'IRATA Safety AI',
+    quotingCalculator: 'Quoting Calculator',
+    centerSettings: 'Center Settings',
+    clientDashboard: 'Client Dashboard',
+    requestManpower: 'Request Manpower',
+    activeProjects: 'Active Projects',
+    techniciansRoster: 'Technicians Roster',
+    dynamicPriceEstimator: 'Dynamic Price Estimator',
+    irataAiSafetyAdvisor: 'IRATA AI Safety Advisor',
+    complianceSafetyDocs: 'Compliance & Safety Docs',
+    companyProfile: 'Company Profile',
+    myDashboard: 'My Dashboard',
+    digitalLogbook: 'Digital Logbook',
+    qrVerification: 'QR Verification',
+    myCertifications: 'My Certifications',
+    jobDeployments: 'Job Deployments',
+    irataGuidelinesAi: 'IRATA Guidelines AI',
+    safetyChecklist: 'Safety Checklist',
+    profileAndIqama: 'Profile & IQAMA',
+
+    // ── Top Nav ──
     navOverview: 'Overview',
     navTechnicians: 'Technicians Roster',
     navDeployments: 'Live Deployments',
@@ -33,7 +83,7 @@ export const translations = {
     navProfile: 'My Profile',
     navSignOut: 'Sign Out',
 
-    // Common Actions
+    // ── Common Actions ──
     add: 'Add',
     remove: 'Remove',
     removeAccount: 'Remove Account',
@@ -52,32 +102,159 @@ export const translations = {
     sar: 'SAR',
     perShift: 'per shift',
     elevation: 'Elevation',
+    loading: 'Loading...',
+    error: 'Error',
+    noData: 'No data available.',
+    close: 'Close',
+    edit: 'Edit',
+    delete: 'Delete',
+    view: 'View',
+    export: 'Export',
+    submit: 'Submit',
+    next: 'Next',
+    back: 'Back',
+    refresh: 'Refresh',
 
-    // AI Features
+    // ── Dashboard Metrics ──
+    totalTechnicians: 'Total Technicians',
+    activeDeployments: 'Active Deployments',
+    openJobRequests: 'Open Job Requests',
+    monthlyRevenue: 'Monthly Revenue',
+    complianceRate: 'Compliance Rate',
+    expiringCertifications: 'Expiring Certifications',
+    featuredTechnicians: 'Featured Technicians',
+    ropeHours: 'Rope Hours',
+    dailyRate: 'Daily Rate',
+    specializations: 'Specializations',
+    performance: 'Performance',
+    availableFrom: 'Available from',
+    irataLevel: 'IRATA Level',
+    totalRopeHours: 'Total Rope Hours',
+    dailyRateSar: 'Daily Rate (SAR)',
+    nationality: 'Nationality',
+    fatigueScore: 'Fatigue Score',
+
+    // ── Job Status Labels ──
+    draft: 'Draft',
+    submitted: 'Submitted',
+    aiAssessed: 'AI Assessed',
+    quoted: 'Quoted',
+    approved: 'Approved',
+    crewAssigned: 'Crew Assigned',
+    cancelled: 'Cancelled',
+    disputed: 'Disputed',
+    urgent: 'Urgent',
+    normal: 'Normal',
+    high: 'High',
+    critical: 'Critical',
+    low: 'Low',
+    medium: 'Medium',
+
+    // ── Technician Status ──
+    available: 'Available',
+    deployed: 'Deployed',
+    onLeave: 'On Leave',
+    inTraining: 'In Training',
+    inactive: 'Inactive',
+    pendingReview: 'Pending Review',
+
+    // ── AI Features ──
     aiAssistantTitle: 'Saeed AI — Safety Advisor',
     aiAssistantSubtitle: 'IRATA ICOP 2024 & Saudi Industrial Safety Standards',
     aiAutoAssess: 'Auto-Assess with Gemini AI',
     aiUploadCert: 'Upload Certificate (AI OCR)',
     askAiPlaceholder: 'Ask Saeed AI about rigging loads, safety ratios, or Aramco permit standards...',
+    aiPowered: 'AI Powered',
 
-    // IRATA Levels
-    level1: 'Level 1 - Technician',
-    level2: 'Level 2 - Lead Tech',
-    level3: 'Level 3 - Supervisor',
+    // ── IRATA Levels ──
+    level1: 'Level 1 — Technician',
+    level2: 'Level 2 — Lead Tech',
+    level3: 'Level 3 — Supervisor',
 
-    // Mobile & Layout
+    // ── Mobile & Layout ──
     menu: 'Menu',
     notifications: 'Notifications',
     support: '24/7 Support',
+    expandSidebar: 'Expand sidebar',
+    collapseSidebar: 'Collapse sidebar',
+
+    // ── Auth ──
+    signIn: 'Sign In',
+    signUp: 'Sign Up',
+    email: 'Email Address',
+    password: 'Password',
+    fullName: 'Full Name',
+    phone: 'Phone Number',
+    forgotPassword: 'Forgot password?',
+    alreadyHaveAccount: 'Already have an account?',
+    dontHaveAccount: "Don't have an account?",
+
+    // ── Empty States ──
+    noTechnicians: 'No Technicians in Roster',
+    noTechniciansDesc: 'No technicians found. Add your first technician to get started.',
+    noJobs: 'No Job Requests',
+    noJobsDesc: 'No job requests have been submitted yet.',
+    noProjects: 'No Active Projects',
+    noProjectsDesc: 'You have no active projects at this time.',
+    addFirstTechnician: 'Add First Technician',
   },
 
   ar: {
-    // Brand
+    // ── Brand ──
     brandName: 'بتروبروف',
     brandTagline: 'بوابة التسلق الصناعي بالحبال وإمداد الكوادر المتخصصة',
     brandSub: 'الخدمات الصناعية والبترولية في المملكة العربية السعودية',
+    irataCompliant: 'متوافق مع معايير IRATA ICOP',
+    saudiSafetyVerified: 'تم التحقق من اللوائح الصناعية السعودية للسلامة في الأماكن المرتفعة.',
 
-    // Navigation
+    // ── Sidebar Group Labels ──
+    platformCommand: 'مركز قيادة العمليات',
+    safetyAndIntelligence: 'السلامة والذكاء الاصطناعي',
+    system: 'إدارة النظام',
+    dispatchOperations: 'عمليات الإيفاد الميداني',
+    safetyAndCompliance: 'السلامة والامتثال',
+    management: 'الإدارة',
+    clientHub: 'بوابة العملاء',
+    safetyAndQuotes: 'السلامة وعروض الأسعار',
+    organization: 'المؤسسة',
+    technicianHub: 'بوابة الفنيين',
+    safetyAssistant: 'مساعد السلامة الذكي',
+    account: 'الحساب الشخصي',
+
+    // ── Sidebar Nav Items ──
+    dispatchOverview: 'لوحة التحكم الميدانية',
+    liveDeployments: 'مواقع العمل المباشرة',
+    techniciansDirectory: 'دليل الفنيين المعتمدين',
+    clientOrganizations: 'الشركات والعملاء',
+    jobRequestsAndQuotes: 'طلبات الكوادر والتسعير',
+    complianceTracker: 'متتبع الامتثال والسلامة',
+    irataAiAssistant: 'مساعد سلامة IRATA الذكي',
+    dynamicQuotingEngine: 'محرك التسعير الديناميكي',
+    auditTrail: 'سجل العمليات والتدقيق',
+    platformSettings: 'إعدادات المنصة',
+    overview: 'نظرة عامة',
+    jobRequests: 'طلبات الكوادر',
+    safetyAiAdvisor: 'مساعد السلامة الذكي',
+    quotingCalculator: 'حاسبة عروض الأسعار',
+    centerSettings: 'إعدادات مركز العمليات',
+    clientDashboard: 'لوحة تحكم العميل',
+    requestManpower: 'طلب كوادر متخصصة',
+    activeProjects: 'المشاريع الجارية',
+    techniciansRoster: 'سجل الفنيين',
+    dynamicPriceEstimator: 'تقدير التكاليف الديناميكي',
+    irataAiSafetyAdvisor: 'مستشار سلامة IRATA الذكي',
+    complianceSafetyDocs: 'وثائق الامتثال والسلامة',
+    companyProfile: 'ملف الشركة',
+    myDashboard: 'لوحة التحكم الخاصة بي',
+    digitalLogbook: 'سجل الساعات الرقمي',
+    qrVerification: 'التحقق الميداني بالرمز QR',
+    myCertifications: 'شهاداتي المهنية',
+    jobDeployments: 'مهام الإيفاد',
+    irataGuidelinesAi: 'دليل IRATA الذكي',
+    safetyChecklist: 'قائمة فحص السلامة',
+    profileAndIqama: 'الملف الشخصي والإقامة',
+
+    // ── Top Nav ──
     navOverview: 'لوحة التحكم العامة',
     navTechnicians: 'سجل الفنيين المعتمدين',
     navDeployments: 'مواقع العمل الميدانية',
@@ -98,7 +275,7 @@ export const translations = {
     navProfile: 'الملف الشخصي',
     navSignOut: 'تسجيل الخروج',
 
-    // Common Actions
+    // ── Common Actions ──
     add: 'إضافة',
     remove: 'حذف',
     removeAccount: 'حذف الحساب',
@@ -117,22 +294,100 @@ export const translations = {
     sar: 'ريال سعودي',
     perShift: 'لكل وردية',
     elevation: 'الارتفاع',
+    loading: 'جاري التحميل...',
+    error: 'خطأ',
+    noData: 'لا توجد بيانات متاحة.',
+    close: 'إغلاق',
+    edit: 'تعديل',
+    delete: 'حذف',
+    view: 'عرض',
+    export: 'تصدير',
+    submit: 'إرسال',
+    next: 'التالي',
+    back: 'رجوع',
+    refresh: 'تحديث',
 
-    // AI Features
+    // ── Dashboard Metrics ──
+    totalTechnicians: 'إجمالي الفنيين',
+    activeDeployments: 'الإيفادات النشطة',
+    openJobRequests: 'طلبات العمل المفتوحة',
+    monthlyRevenue: 'الإيرادات الشهرية',
+    complianceRate: 'معدل الامتثال',
+    expiringCertifications: 'الشهادات المنتهية قريباً',
+    featuredTechnicians: 'الفنيون المميزون',
+    ropeHours: 'ساعات الحبال',
+    dailyRate: 'السعر اليومي',
+    specializations: 'التخصصات',
+    performance: 'الأداء',
+    availableFrom: 'متاح من',
+    irataLevel: 'مستوى IRATA',
+    totalRopeHours: 'إجمالي ساعات الحبال',
+    dailyRateSar: 'السعر اليومي (ريال)',
+    nationality: 'الجنسية',
+    fatigueScore: 'مؤشر الإجهاد',
+
+    // ── Job Status Labels ──
+    draft: 'مسودة',
+    submitted: 'تم الإرسال',
+    aiAssessed: 'تم تقييمه بالذكاء الاصطناعي',
+    quoted: 'تم التسعير',
+    approved: 'معتمد',
+    crewAssigned: 'تم تعيين الفريق',
+    cancelled: 'ملغى',
+    disputed: 'متنازع عليه',
+    urgent: 'عاجل',
+    normal: 'عادي',
+    high: 'عالي',
+    critical: 'حرج',
+    low: 'منخفض',
+    medium: 'متوسط',
+
+    // ── Technician Status ──
+    available: 'متاح',
+    deployed: 'في الميدان',
+    onLeave: 'في إجازة',
+    inTraining: 'في التدريب',
+    inactive: 'غير نشط',
+    pendingReview: 'قيد المراجعة',
+
+    // ── AI Features ──
     aiAssistantTitle: 'المستشار الذكي سعيد — معايير IRATA',
     aiAssistantSubtitle: 'معايير IRATA ICOP 2024 ومتطلبات السلامة الصناعية لأرامكو وسابك',
     aiAutoAssess: 'التقييم الذكي بواسطة Gemini AI',
     aiUploadCert: 'رفع الشهادة (استخراج ذكي OCR)',
     askAiPlaceholder: 'اسأل سعيد عن أحمال نقاط التثبيت، نسب الإشراف، أو تصاريح العمل في أرامكو...',
+    aiPowered: 'مدعوم بالذكاء الاصطناعي',
 
-    // IRATA Levels
+    // ── IRATA Levels ──
     level1: 'المستوى الأول — فني تسلق',
     level2: 'المستوى الثاني — قائد فريق',
     level3: 'المستوى الثالث — مشرف سلامة وإنقاذ',
 
-    // Mobile & Layout
+    // ── Mobile & Layout ──
     menu: 'القائمة',
     notifications: 'الإشعارات',
     support: 'الدعم الفني 24/7',
+    expandSidebar: 'توسيع الشريط الجانبي',
+    collapseSidebar: 'طي الشريط الجانبي',
+
+    // ── Auth ──
+    signIn: 'تسجيل الدخول',
+    signUp: 'إنشاء حساب',
+    email: 'البريد الإلكتروني',
+    password: 'كلمة المرور',
+    fullName: 'الاسم الكامل',
+    phone: 'رقم الهاتف',
+    forgotPassword: 'نسيت كلمة المرور؟',
+    alreadyHaveAccount: 'لديك حساب بالفعل؟',
+    dontHaveAccount: 'ليس لديك حساب؟',
+
+    // ── Empty States ──
+    noTechnicians: 'لا يوجد فنيون في السجل',
+    noTechniciansDesc: 'لم يتم العثور على فنيين. أضف أول فني للبدء.',
+    noJobs: 'لا توجد طلبات عمل',
+    noJobsDesc: 'لم يتم إرسال أي طلبات عمل بعد.',
+    noProjects: 'لا توجد مشاريع نشطة',
+    noProjectsDesc: 'ليس لديك أي مشاريع نشطة حالياً.',
+    addFirstTechnician: 'إضافة أول فني',
   },
 }

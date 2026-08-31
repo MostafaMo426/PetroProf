@@ -3,6 +3,7 @@ import animate from 'tailwindcss-animate'
 
 const config: Config = {
   darkMode: ['class'],
+  future: { hoverOnlyWhenSupported: true },
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -16,6 +17,9 @@ const config: Config = {
       screens: { '2xl': '1400px' },
     },
     extend: {
+      screens: {
+        landscape: { raw: '(orientation: landscape)' },
+      },
       colors: {
         // ── PetroProf Brand Palette ──────────────────────────────────────────
         navy: {
@@ -159,5 +163,6 @@ const config: Config = {
   },
   plugins: [animate],
 }
+
 
 export default config

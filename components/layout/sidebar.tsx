@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/types/database.types"
+import { useLanguage } from "@/lib/i18n/context"
 import {
   LayoutDashboard,
   Users,
@@ -16,7 +17,6 @@ import {
   Calculator,
   QrCode,
   Settings,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
   Shield,
@@ -26,7 +26,7 @@ import {
 } from "lucide-react"
 
 interface SidebarItem {
-  title: string
+  titleKey: string
   href: string
   icon: React.ElementType
   badge?: string
@@ -34,110 +34,110 @@ interface SidebarItem {
 }
 
 interface SidebarGroup {
-  label: string
+  labelKey: string
   items: SidebarItem[]
 }
 
 const roleNavConfig: Record<UserRole, SidebarGroup[]> = {
   super_admin: [
     {
-      label: "Platform Command",
+      labelKey: "platformCommand",
       items: [
-        { title: "Dispatch Overview", href: "/admin", icon: LayoutDashboard },
-        { title: "Live Deployments", href: "/admin/deployments", icon: Layers, badge: "Live", badgeVariant: "success" },
-        { title: "Technicians Directory", href: "/admin/technicians", icon: Users },
-        { title: "Client Organizations", href: "/admin/organizations", icon: Briefcase },
-        { title: "Job Requests & Quotes", href: "/admin/jobs", icon: FileSpreadsheet, badge: "3 New", badgeVariant: "orange" },
+        { titleKey: "dispatchOverview", href: "/admin", icon: LayoutDashboard },
+        { titleKey: "liveDeployments", href: "/admin/deployments", icon: Layers, badge: "Live", badgeVariant: "success" },
+        { titleKey: "techniciansDirectory", href: "/admin/technicians", icon: Users },
+        { titleKey: "clientOrganizations", href: "/admin/organizations", icon: Briefcase },
+        { titleKey: "jobRequestsAndQuotes", href: "/admin/jobs", icon: FileSpreadsheet },
       ],
     },
     {
-      label: "Safety & Intelligence",
+      labelKey: "safetyAndIntelligence",
       items: [
-        { title: "Compliance Tracker", href: "/admin/compliance", icon: ShieldCheck, badge: "4 Expiries", badgeVariant: "warning" },
-        { title: "IRATA AI Assistant", href: "/admin/ai-assistant", icon: Sparkles },
-        { title: "Dynamic Quoting Engine", href: "/admin/quoting", icon: Calculator },
+        { titleKey: "complianceTracker", href: "/admin/compliance", icon: ShieldCheck },
+        { titleKey: "irataAiAssistant", href: "/admin/ai-assistant", icon: Sparkles },
+        { titleKey: "dynamicQuotingEngine", href: "/admin/quoting", icon: Calculator },
       ],
     },
     {
-      label: "System",
+      labelKey: "system",
       items: [
-        { title: "Audit Trail", href: "/admin/audit", icon: AlertOctagon },
-        { title: "Platform Settings", href: "/admin/settings", icon: Settings },
+        { titleKey: "auditTrail", href: "/admin/audit", icon: AlertOctagon },
+        { titleKey: "platformSettings", href: "/admin/settings", icon: Settings },
       ],
     },
   ],
   admin: [
     {
-      label: "Dispatch Operations",
+      labelKey: "dispatchOperations",
       items: [
-        { title: "Overview", href: "/admin", icon: LayoutDashboard },
-        { title: "Technicians Directory", href: "/admin/technicians", icon: Users },
-        { title: "Job Requests", href: "/admin/jobs", icon: Briefcase, badge: "3 New", badgeVariant: "orange" },
-        { title: "Live Deployments", href: "/admin/deployments", icon: Layers },
+        { titleKey: "overview", href: "/admin", icon: LayoutDashboard },
+        { titleKey: "techniciansDirectory", href: "/admin/technicians", icon: Users },
+        { titleKey: "jobRequests", href: "/admin/jobs", icon: Briefcase },
+        { titleKey: "liveDeployments", href: "/admin/deployments", icon: Layers },
       ],
     },
     {
-      label: "Safety & Compliance",
+      labelKey: "safetyAndCompliance",
       items: [
-        { title: "Compliance Tracker", href: "/admin/compliance", icon: ShieldCheck, badge: "4 Alert", badgeVariant: "warning" },
-        { title: "IRATA Safety AI", href: "/admin/ai-assistant", icon: Sparkles },
-        { title: "Quoting Calculator", href: "/admin/quoting", icon: Calculator },
+        { titleKey: "complianceTracker", href: "/admin/compliance", icon: ShieldCheck },
+        { titleKey: "safetyAiAdvisor", href: "/admin/ai-assistant", icon: Sparkles },
+        { titleKey: "quotingCalculator", href: "/admin/quoting", icon: Calculator },
       ],
     },
     {
-      label: "Management",
+      labelKey: "management",
       items: [
-        { title: "Center Settings", href: "/admin/settings", icon: Settings },
+        { titleKey: "centerSettings", href: "/admin/settings", icon: Settings },
       ],
     },
   ],
   client: [
     {
-      label: "Client Hub",
+      labelKey: "clientHub",
       items: [
-        { title: "Client Dashboard", href: "/client", icon: LayoutDashboard },
-        { title: "Request Manpower", href: "/client/new-request", icon: Sparkles, badge: "AI Powered", badgeVariant: "orange" },
-        { title: "Active Projects", href: "/client/projects", icon: Briefcase },
-        { title: "Technicians Roster", href: "/client/technicians", icon: Users },
+        { titleKey: "clientDashboard", href: "/client", icon: LayoutDashboard },
+        { titleKey: "requestManpower", href: "/client/new-request", icon: Sparkles, badge: "AI", badgeVariant: "orange" },
+        { titleKey: "activeProjects", href: "/client/projects", icon: Briefcase },
+        { titleKey: "techniciansRoster", href: "/client/technicians", icon: Users },
       ],
     },
     {
-      label: "Safety & Quotes",
+      labelKey: "safetyAndQuotes",
       items: [
-        { title: "Dynamic Price Estimator", href: "/client/calculator", icon: Calculator },
-        { title: "IRATA AI Safety Advisor", href: "/client/ai-assistant", icon: Sparkles },
-        { title: "Compliance & Safety Docs", href: "/client/compliance", icon: ShieldCheck },
+        { titleKey: "dynamicPriceEstimator", href: "/client/calculator", icon: Calculator },
+        { titleKey: "irataAiSafetyAdvisor", href: "/client/ai-assistant", icon: Sparkles },
+        { titleKey: "complianceSafetyDocs", href: "/client/compliance", icon: ShieldCheck },
       ],
     },
     {
-      label: "Organization",
+      labelKey: "organization",
       items: [
-        { title: "Company Profile", href: "/client/settings", icon: Settings },
+        { titleKey: "companyProfile", href: "/client/settings", icon: Settings },
       ],
     },
   ],
   technician: [
     {
-      label: "Technician Hub",
+      labelKey: "technicianHub",
       items: [
-        { title: "My Dashboard", href: "/technician", icon: LayoutDashboard },
-        { title: "Digital Logbook", href: "/technician/logbook", icon: BookOpen, badge: "QR Sync", badgeVariant: "success" },
-        { title: "QR Verification", href: "/technician/qr-verify", icon: QrCode },
-        { title: "My Certifications", href: "/technician/certificates", icon: Award, badge: "AI OCR", badgeVariant: "orange" },
-        { title: "Job Deployments", href: "/technician/jobs", icon: Briefcase },
+        { titleKey: "myDashboard", href: "/technician", icon: LayoutDashboard },
+        { titleKey: "digitalLogbook", href: "/technician/logbook", icon: BookOpen, badge: "QR", badgeVariant: "success" },
+        { titleKey: "qrVerification", href: "/technician/qr-verify", icon: QrCode },
+        { titleKey: "myCertifications", href: "/technician/certificates", icon: Award, badge: "AI", badgeVariant: "orange" },
+        { titleKey: "jobDeployments", href: "/technician/jobs", icon: Briefcase },
       ],
     },
     {
-      label: "Safety Assistant",
+      labelKey: "safetyAssistant",
       items: [
-        { title: "IRATA Guidelines AI", href: "/technician/ai-assistant", icon: Sparkles },
-        { title: "Safety Checklist", href: "/technician/checklist", icon: ShieldCheck },
+        { titleKey: "irataGuidelinesAi", href: "/technician/ai-assistant", icon: Sparkles },
+        { titleKey: "safetyChecklist", href: "/technician/checklist", icon: ShieldCheck },
       ],
     },
     {
-      label: "Account",
+      labelKey: "account",
       items: [
-        { title: "Profile & IQAMA", href: "/technician/profile", icon: Settings },
+        { titleKey: "profileAndIqama", href: "/technician/profile", icon: Settings },
       ],
     },
   ],
@@ -157,12 +157,14 @@ export function Sidebar({
   className,
 }: SidebarProps) {
   const pathname = usePathname()
+  const { t, isRTL } = useLanguage()
   const groups = roleNavConfig[role] || roleNavConfig.client
 
   return (
     <aside
       className={cn(
         "relative flex flex-col border-r border-navy-800 bg-navy-950 text-white transition-all duration-300 z-30",
+        isRTL && "border-r-0 border-l border-navy-800",
         collapsed ? "w-20" : "w-72",
         className
       )}
@@ -179,7 +181,7 @@ export function Sidebar({
           {!collapsed && (
             <div className="flex flex-col min-w-0 animate-fade-in">
               <span className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
-                PetroProf
+                {t('brandName')}
                 <span className="rounded-md bg-orange-500/20 px-1.5 py-0.2 text-[9px] font-extrabold text-orange-400 border border-orange-500/30">
                   IRATA
                 </span>
@@ -196,12 +198,12 @@ export function Sidebar({
           <button
             onClick={onToggleCollapse}
             className="hidden md:flex h-7 w-7 items-center justify-center rounded-lg bg-navy-900 text-navy-400 hover:bg-navy-800 hover:text-white transition-colors"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? t('expandSidebar') : t('collapseSidebar')}
           >
             {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
+              isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />
             )}
           </button>
         )}
@@ -213,7 +215,7 @@ export function Sidebar({
           <div key={groupIdx} className="space-y-1.5">
             {!collapsed && (
               <p className="px-3 text-[10px] font-extrabold uppercase tracking-widest text-navy-500">
-                {group.label}
+                {t(group.labelKey as any)}
               </p>
             )}
             <div className="space-y-1">
@@ -227,9 +229,10 @@ export function Sidebar({
                   <Link
                     key={item.href}
                     href={item.href}
-                    title={collapsed ? item.title : undefined}
+                    title={collapsed ? t(item.titleKey as any) : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200 group relative",
+                      isRTL && "flex-row-reverse text-right",
                       isActive
                         ? "bg-orange-gradient text-white shadow-orange-glow font-bold"
                         : "text-navy-300 hover:bg-navy-900 hover:text-white"
@@ -242,12 +245,13 @@ export function Sidebar({
                       )}
                     />
                     {!collapsed && (
-                      <span className="flex-1 truncate">{item.title}</span>
+                      <span className="flex-1 truncate">{t(item.titleKey as any)}</span>
                     )}
                     {!collapsed && item.badge && (
                       <span
                         className={cn(
                           "ml-auto rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider",
+                          isRTL && "ml-0 mr-auto",
                           item.badgeVariant === "orange" && "bg-orange-500 text-white",
                           item.badgeVariant === "warning" && "bg-yellow-400 text-navy-950",
                           item.badgeVariant === "success" && "bg-emerald-500 text-white",
@@ -265,17 +269,17 @@ export function Sidebar({
         ))}
       </div>
 
-      {/* Safety Standard Badge Footer */}
+      {/* IRATA Safety Badge Footer */}
       {!collapsed ? (
         <div className="p-3 m-3 rounded-xl bg-navy-900/90 border border-navy-800/80 text-xs">
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className={cn("flex items-center gap-2 mb-1.5", isRTL && "flex-row-reverse")}>
             <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-bold text-white text-[11px]">
-              IRATA ICOP Compliant
+              {t('irataCompliant')}
             </span>
           </div>
-          <p className="text-[10px] text-navy-400 leading-tight">
-            Saudi Industrial Safety & Height Regulations verified.
+          <p className={cn("text-[10px] text-navy-400 leading-tight", isRTL && "text-right")}>
+            {t('saudiSafetyVerified')}
           </p>
         </div>
       ) : (

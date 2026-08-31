@@ -31,7 +31,7 @@ export function AnimatedTechnician() {
   return (
     <div
       aria-hidden="true"
-      className={`fixed top-0 bottom-0 w-12 pointer-events-none z-50 hidden md:flex flex-col items-center justify-between transition-all duration-300 ${
+      className={`fixed top-0 bottom-0 w-12 pointer-events-none z-50 hidden landscape:flex flex-col items-center justify-between transition-all duration-300 ${
         isRTL ? 'left-3 lg:left-5' : 'right-3 lg:right-5'
       }`}
     >

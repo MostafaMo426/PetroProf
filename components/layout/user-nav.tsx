@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { useLanguage } from "@/lib/i18n/context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,15 +39,16 @@ interface UserNavProps {
 export function UserNav({ user }: UserNavProps) {
   const router = useRouter()
   const supabase = createClient()
+  const { t } = useLanguage()
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut()
-      toast.success("Signed out successfully")
+      toast.success(t('navSignOut'))
       router.push("/login")
       router.refresh()
     } catch (err) {
-      toast.error("Failed to sign out")
+      toast.error(t('error'))
     }
   }
 
@@ -54,7 +56,7 @@ export function UserNav({ user }: UserNavProps) {
     super_admin: { label: "Super Admin", bg: "bg-purple-100 text-purple-800" },
     admin: { label: "Center Admin", bg: "bg-navy-100 text-navy-800" },
     client: { label: "Client Partner", bg: "bg-orange-100 text-orange-800" },
-    technician: { label: "Rope Access Tech", bg: "bg-emerald-100 text-emerald-800" },
+    technician: { label: "IRATA Tech", bg: "bg-emerald-100 text-emerald-800" },
   }
 
   const roleInfo = roleLabelMap[user.role] || {
@@ -77,7 +79,7 @@ export function UserNav({ user }: UserNavProps) {
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center justify-between">
               <p className="text-sm font-bold text-navy-950 truncate">
-                {user.fullName || "User"}
+                {user.fullName || t('navProfile')}
               </p>
               <span
                 className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${roleInfo.bg}`}
@@ -95,21 +97,21 @@ export function UserNav({ user }: UserNavProps) {
             className="gap-2.5"
           >
             <User className="h-4 w-4 text-navy-400" />
-            <span>Profile & Credentials</span>
+            <span>{t('navProfile')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => router.push(`/${user.role}/settings`)}
             className="gap-2.5"
           >
             <Settings className="h-4 w-4 text-navy-400" />
-            <span>Account Settings</span>
+            <span>{t('navSettings')}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => router.push(`/${user.role}/ai-assistant`)}
             className="gap-2.5"
           >
             <Sparkles className="h-4 w-4 text-orange-500" />
-            <span>IRATA AI Assistant</span>
+            <span>{t('navAiAssistant')}</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
@@ -125,7 +127,7 @@ export function UserNav({ user }: UserNavProps) {
           className="gap-2.5 text-navy-500"
         >
           <HelpCircle className="h-4 w-4 text-navy-400" />
-          <span>Help & Support</span>
+          <span>{t('support')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -133,7 +135,7 @@ export function UserNav({ user }: UserNavProps) {
           className="gap-2.5 text-red-600 focus:bg-red-50 focus:text-red-700 font-semibold"
         >
           <LogOut className="h-4 w-4 text-red-500" />
-          <span>Sign Out</span>
+          <span>{t('navSignOut')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
