@@ -24,8 +24,38 @@ const getServiceCredentials = () => {
 }
 
 /**
+ * Searches for an existing auth user by email via Admin API.
+ */
+export async function getAuthUserByEmail(email: string): Promise<{ user?: any; error?: string }> {
+  try {
+    const { url, headers } = getServiceCredentials()
+    const res = await fetch(`${url}/auth/v1/admin/users?per_page=1000`, {
+      method: 'GET',
+      headers,
+    })
+
+    if (!res.ok) {
+      return { error: 'Could not query auth users list' }
+    }
+
+    const data = await res.json()
+    const users: any[] = data.users || data || []
+    const match = users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+
+    if (match?.id) {
+      return { user: match }
+    }
+
+    return { error: 'User not found in Auth system' }
+  } catch (err: any) {
+    return { error: err.message }
+  }
+}
+
+/**
  * Creates user in Supabase Auth via Admin REST API.
- * Returns the user with a real UUID if successful.
+ * If user already exists (e.g. from a prior incomplete attempt),
+ * automatically recovers their ID and updates password & metadata.
  */
 export async function createAuthUser(userData: {
   email: string
@@ -35,6 +65,7 @@ export async function createAuthUser(userData: {
   try {
     const { url, headers } = getServiceCredentials()
 
+    // 1. Try initial creation
     const res = await fetch(`${url}/auth/v1/admin/users`, {
       method: 'POST',
       headers,
@@ -47,16 +78,44 @@ export async function createAuthUser(userData: {
     })
 
     const data = await res.json()
-    if (!res.ok) {
-      return { error: data.msg || data.message || data.error_description || 'Failed to create auth user' }
+
+    // 2. If successfully created
+    if (res.ok && data?.id && typeof data.id === 'string') {
+      return { user: data }
     }
 
-    // Validate that we got a real UUID back
-    if (!data?.id || typeof data.id !== 'string' || data.id.length < 30) {
-      return { error: 'Auth API returned invalid or missing user ID' }
+    const errMsg: string = data.msg || data.message || data.error_description || ''
+
+    // 3. Self-healing: If user already exists in auth.users, find their UUID and update them
+    if (
+      res.status === 422 ||
+      errMsg.toLowerCase().includes('already') ||
+      errMsg.toLowerCase().includes('registered') ||
+      errMsg.toLowerCase().includes('exists')
+    ) {
+      const existing = await getAuthUserByEmail(userData.email)
+      if (existing.user?.id) {
+        // Update user credentials & metadata to match the new request
+        const updateRes = await fetch(`${url}/auth/v1/admin/users/${existing.user.id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            password: userData.password,
+            email_confirm: true,
+            user_metadata: userData.user_metadata,
+          }),
+        })
+
+        if (updateRes.ok) {
+          const updatedUser = await updateRes.json()
+          return { user: updatedUser }
+        }
+
+        return { user: existing.user }
+      }
     }
 
-    return { user: data }
+    return { error: errMsg || 'Failed to create auth user' }
   } catch (err: any) {
     return { error: err.message }
   }
@@ -104,7 +163,7 @@ export async function adminUpsertProfile(profile: {
 }) {
   const { url, headers } = getServiceCredentials()
 
-  const res = await fetch(`${url}/rest/v1/profiles`, {
+  const res = await fetch(`${url}/rest/v1/profiles?on_conflict=id`, {
     method: 'POST',
     headers: {
       ...headers,
@@ -127,9 +186,12 @@ export async function adminUpsertProfile(profile: {
 export async function adminInsertTechnician(tech: Record<string, any>) {
   const { url, headers } = getServiceCredentials()
 
-  const res = await fetch(`${url}/rest/v1/technicians`, {
+  const res = await fetch(`${url}/rest/v1/technicians?on_conflict=profile_id`, {
     method: 'POST',
-    headers,
+    headers: {
+      ...headers,
+      Prefer: 'resolution=merge-duplicates',
+    },
     body: JSON.stringify(tech),
   })
 
@@ -161,7 +223,7 @@ export async function adminInsertOrganization(org: {
 
   if (!res.ok) {
     const errText = await res.text()
-    // Non-fatal: log but don't throw — profile was already created
+    // Non-fatal: log but don't throw
     console.warn(`Organization insert warning: ${errText}`)
   }
 
