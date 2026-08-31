@@ -1,61 +1,30 @@
 /**
  * lib/supabase/admin.ts
- * High-reliability REST API helpers using SUPABASE_SERVICE_ROLE_KEY.
- * Bypasses RLS on administrative actions and eliminates Webpack bundling chunk issues.
+ * Robust server-side Supabase client using SUPABASE_SERVICE_ROLE_KEY.
+ * Handles admin user creation, auto-recovery of existing auth records, and cascading deletions.
  */
+import { createClient } from '@supabase/supabase-js'
 
-const getServiceCredentials = () => {
+export function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!url || !key) {
-    throw new Error('Supabase URL or Service Role Key missing in .env.local')
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in environment variables')
   }
 
-  return {
-    url,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation',
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
-  }
+  })
 }
 
 /**
- * Searches for an existing auth user by email via Admin API.
- */
-export async function getAuthUserByEmail(email: string): Promise<{ user?: any; error?: string }> {
-  try {
-    const { url, headers } = getServiceCredentials()
-    const res = await fetch(`${url}/auth/v1/admin/users?per_page=1000`, {
-      method: 'GET',
-      headers,
-    })
-
-    if (!res.ok) {
-      return { error: 'Could not query auth users list' }
-    }
-
-    const data = await res.json()
-    const users: any[] = data.users || data || []
-    const match = users.find((u) => u.email?.toLowerCase() === email.toLowerCase())
-
-    if (match?.id) {
-      return { user: match }
-    }
-
-    return { error: 'User not found in Auth system' }
-  } catch (err: any) {
-    return { error: err.message }
-  }
-}
-
-/**
- * Creates user in Supabase Auth via Admin REST API.
- * If user already exists (e.g. from a prior incomplete attempt),
- * automatically recovers their ID and updates password & metadata.
+ * Creates user in Supabase Auth via Admin SDK.
+ * If the user already exists in auth.users, it automatically finds their UUID,
+ * updates their password & metadata, and returns the user cleanly.
  */
 export async function createAuthUser(userData: {
   email: string
@@ -63,84 +32,91 @@ export async function createAuthUser(userData: {
   user_metadata: Record<string, any>
 }): Promise<{ user?: any; error?: string }> {
   try {
-    const { url, headers } = getServiceCredentials()
+    const supabase = getAdminClient()
 
     // 1. Try initial creation
-    const res = await fetch(`${url}/auth/v1/admin/users`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        email: userData.email,
-        password: userData.password,
-        email_confirm: true,
-        user_metadata: userData.user_metadata,
-      }),
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: userData.email,
+      password: userData.password,
+      email_confirm: true,
+      user_metadata: userData.user_metadata,
     })
 
-    const data = await res.json()
-
-    // 2. If successfully created
-    if (res.ok && data?.id && typeof data.id === 'string') {
-      return { user: data }
+    if (!error && data?.user?.id) {
+      return { user: data.user }
     }
 
-    const errMsg: string = data.msg || data.message || data.error_description || ''
+    const errMsg = error?.message || ''
 
-    // 3. Self-healing: If user already exists in auth.users, find their UUID and update them
+    // 2. Self-healing: If user already exists in auth.users, find their UUID and update them
     if (
-      res.status === 422 ||
       errMsg.toLowerCase().includes('already') ||
       errMsg.toLowerCase().includes('registered') ||
-      errMsg.toLowerCase().includes('exists')
+      errMsg.toLowerCase().includes('exists') ||
+      (error as any)?.status === 422
     ) {
-      const existing = await getAuthUserByEmail(userData.email)
-      if (existing.user?.id) {
-        // Update user credentials & metadata to match the new request
-        const updateRes = await fetch(`${url}/auth/v1/admin/users/${existing.user.id}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify({
+      // Find the user by listing users (pagination default 50 per page)
+      let page = 1
+      let foundUser: any = null
+
+      while (page <= 5) {
+        const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
+          page,
+          perPage: 50,
+        })
+
+        if (listError || !listData?.users || listData.users.length === 0) {
+          break
+        }
+
+        const match = listData.users.find(
+          (u) => u.email?.toLowerCase() === userData.email.toLowerCase()
+        )
+
+        if (match) {
+          foundUser = match
+          break
+        }
+
+        page++
+      }
+
+      if (foundUser?.id) {
+        // Update user's password and metadata to ensure active state
+        const { data: updatedData, error: updateError } = await supabase.auth.admin.updateUserById(
+          foundUser.id,
+          {
             password: userData.password,
             email_confirm: true,
             user_metadata: userData.user_metadata,
-          }),
-        })
+          }
+        )
 
-        if (updateRes.ok) {
-          const updatedUser = await updateRes.json()
-          return { user: updatedUser }
+        if (!updateError && updatedData?.user) {
+          return { user: updatedData.user }
         }
 
-        return { user: existing.user }
+        return { user: foundUser }
       }
     }
 
-    return { error: errMsg || 'Failed to create auth user' }
+    return { error: errMsg || 'Failed to create user in Auth system' }
   } catch (err: any) {
-    return { error: err.message }
+    console.error('[createAuthUser Exception]', err)
+    return { error: err.message || 'Unknown exception during auth user creation' }
   }
 }
 
 /**
- * Deletes user from Supabase Auth via Admin REST API.
+ * Deletes user from Supabase Auth via Admin SDK.
  */
 export async function deleteAuthUser(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { url, headers } = getServiceCredentials()
+    const supabase = getAdminClient()
+    const { error } = await supabase.auth.admin.deleteUser(userId)
 
-    const res = await fetch(`${url}/auth/v1/admin/users/${userId}`, {
-      method: 'DELETE',
-      headers,
-    })
-
-    if (res.status === 404) {
-      // User already gone — treat as success
-      return { success: true }
-    }
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return { success: false, error: errText }
+    if (error && !error.message?.includes('not found') && (error as any)?.status !== 404) {
+      return { success: false, error: error.message }
     }
 
     return { success: true }
@@ -150,7 +126,7 @@ export async function deleteAuthUser(userId: string): Promise<{ success: boolean
 }
 
 /**
- * Inserts or updates Profile using Service Role key (Bypasses RLS).
+ * Inserts or updates Profile using Service Role (Bypasses RLS).
  */
 export async function adminUpsertProfile(profile: {
   id: string
@@ -161,50 +137,36 @@ export async function adminUpsertProfile(profile: {
   is_active?: boolean
   onboarding_complete?: boolean
 }) {
-  const { url, headers } = getServiceCredentials()
+  const supabase = getAdminClient()
+  const { error } = await supabase
+    .from('profiles')
+    .upsert(profile, { onConflict: 'id' })
 
-  const res = await fetch(`${url}/rest/v1/profiles?on_conflict=id`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      Prefer: 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(profile),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Profile insert error: ${errText}`)
+  if (error) {
+    throw new Error(`Profile upsert error: ${error.message}`)
   }
 
   return true
 }
 
 /**
- * Inserts Technician record using Service Role key (Bypasses RLS).
+ * Inserts Technician record using Service Role (Bypasses RLS).
  */
 export async function adminInsertTechnician(tech: Record<string, any>) {
-  const { url, headers } = getServiceCredentials()
+  const supabase = getAdminClient()
+  const { error } = await supabase
+    .from('technicians')
+    .upsert(tech, { onConflict: 'profile_id' })
 
-  const res = await fetch(`${url}/rest/v1/technicians?on_conflict=profile_id`, {
-    method: 'POST',
-    headers: {
-      ...headers,
-      Prefer: 'resolution=merge-duplicates',
-    },
-    body: JSON.stringify(tech),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`Technician insert error: ${errText}`)
+  if (error) {
+    throw new Error(`Technician upsert error: ${error.message}`)
   }
 
   return true
 }
 
 /**
- * Inserts Organization record for client accounts using Service Role key.
+ * Inserts Organization record for client accounts using Service Role.
  */
 export async function adminInsertOrganization(org: {
   name: string
@@ -213,55 +175,54 @@ export async function adminInsertOrganization(org: {
   primary_contact_id: string
   is_active?: boolean
 }) {
-  const { url, headers } = getServiceCredentials()
+  const supabase = getAdminClient()
+  const { error } = await supabase
+    .from('organizations')
+    .insert(org)
 
-  const res = await fetch(`${url}/rest/v1/organizations`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(org),
-  })
-
-  if (!res.ok) {
-    const errText = await res.text()
-    // Non-fatal: log but don't throw
-    console.warn(`Organization insert warning: ${errText}`)
+  if (error) {
+    console.warn(`Organization insert warning: ${error.message}`)
   }
 
   return true
 }
 
 /**
- * Deletes all data for a user using Service Role key.
+ * Deletes all data for a user using Service Role.
  * Order matters: delete dependent records before the profile, profile before auth.
  * Supports passing either a profile UUID or a technician UUID.
  */
 export async function adminDeleteUserData(idOrProfileId: string) {
-  const { url, headers } = getServiceCredentials()
+  const supabase = getAdminClient()
 
   let profileId: string = idOrProfileId
   let technicianId: string | null = null
 
   // 1. Resolve technicianId and profileId bidirectionally
   try {
-    const res = await fetch(`${url}/rest/v1/technicians?profile_id=eq.${idOrProfileId}&select=id`, { headers })
-    if (res.ok) {
-      const data = await res.json()
-      if (Array.isArray(data) && data.length > 0) {
-        technicianId = data[0].id
-      }
+    const { data: techByProfile } = await supabase
+      .from('technicians')
+      .select('id')
+      .eq('profile_id', idOrProfileId)
+      .maybeSingle()
+
+    if (techByProfile?.id) {
+      technicianId = techByProfile.id
     }
   } catch {}
 
   if (!technicianId) {
     try {
-      const res = await fetch(`${url}/rest/v1/technicians?id=eq.${idOrProfileId}&select=id,profile_id`, { headers })
-      if (res.ok) {
-        const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) {
-          technicianId = data[0].id
-          if (data[0].profile_id) {
-            profileId = data[0].profile_id
-          }
+      const { data: techById } = await supabase
+        .from('technicians')
+        .select('id, profile_id')
+        .eq('id', idOrProfileId)
+        .maybeSingle()
+
+      if (techById?.id) {
+        technicianId = techById.id
+        if (techById.profile_id) {
+          profileId = techById.profile_id
         }
       }
     } catch {}
@@ -269,31 +230,28 @@ export async function adminDeleteUserData(idOrProfileId: string) {
 
   // 2. Delete certifications, logbook entries, and crew assignments referencing technician
   if (technicianId) {
-    await fetch(`${url}/rest/v1/certifications?technician_id=eq.${technicianId}`, { method: 'DELETE', headers })
-    await fetch(`${url}/rest/v1/logbook_entries?technician_id=eq.${technicianId}`, { method: 'DELETE', headers })
-    await fetch(`${url}/rest/v1/crew_assignments?technician_id=eq.${technicianId}`, { method: 'DELETE', headers })
+    await supabase.from('certifications').delete().eq('technician_id', technicianId)
+    await supabase.from('logbook_entries').delete().eq('technician_id', technicianId)
+    await supabase.from('crew_assignments').delete().eq('technician_id', technicianId)
   }
 
   // 3. Delete job requests submitted by this user
-  await fetch(`${url}/rest/v1/job_requests?requested_by_id=eq.${profileId}`, { method: 'DELETE', headers })
+  await supabase.from('job_requests').delete().eq('requested_by_id', profileId)
 
   // 4. Delete technician record
   if (technicianId) {
-    await fetch(`${url}/rest/v1/technicians?id=eq.${technicianId}`, { method: 'DELETE', headers })
+    await supabase.from('technicians').delete().eq('id', technicianId)
   }
-  await fetch(`${url}/rest/v1/technicians?profile_id=eq.${profileId}`, { method: 'DELETE', headers })
+  await supabase.from('technicians').delete().eq('profile_id', profileId)
 
   // 5. Delete organizations where this user is primary contact
-  await fetch(`${url}/rest/v1/organizations?primary_contact_id=eq.${profileId}`, { method: 'DELETE', headers })
+  await supabase.from('organizations').delete().eq('primary_contact_id', profileId)
 
   // 6. Delete profile
-  await fetch(`${url}/rest/v1/profiles?id=eq.${profileId}`, { method: 'DELETE', headers })
+  await supabase.from('profiles').delete().eq('id', profileId)
 
   // 7. Delete from Supabase Auth
-  const authResult = await deleteAuthUser(profileId)
-  if (!authResult.success) {
-    console.warn('[adminDeleteUserData] Auth delete note:', authResult.error)
-  }
+  await deleteAuthUser(profileId)
 
   return true
 }
