@@ -11,21 +11,14 @@ import { getTechnicians, type TechnicianWithProfile } from '@/lib/services/techn
 import { getInitials, formatCurrency, formatDate } from '@/lib/utils'
 import type { IrataLevel, TechnicianStatus } from '@/types/database.types'
 import { CreateUserModal } from '@/components/admin/CreateUserModal'
+import { useLanguage } from '@/lib/i18n/context'
 import {
   Search,
-  Filter,
   Users,
-  Shield,
-  Clock,
   Star,
   Phone,
   Mail,
-  MapPin,
-  Calendar,
-  CheckCircle2,
-  AlertTriangle,
   X,
-  Sparkles,
   UserPlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -37,6 +30,7 @@ export default function AdminTechniciansPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedTech, setSelectedTech] = useState<TechnicianWithProfile | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const { t, isRTL } = useLanguage()
 
   const loadTechnicians = () => {
     getTechnicians().then(setTechnicians)
@@ -64,12 +58,12 @@ export default function AdminTechniciansPage() {
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <PageHeader
-        title="Technicians Directory"
-        description="Comprehensive roster of IRATA certified rope access personnel, real-time availability, and verified skill specializations."
+        title={t('techniciansDirectory')}
+        description={t('noTechniciansDesc')}
         badge={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-navy-100 px-3 py-1 text-xs font-bold text-navy-800">
             <Users className="h-3.5 w-3.5" />
-            {technicians.length} Registered Personnel
+            {technicians.length} {t('registeredPersonnel')}
           </span>
         }
       >
@@ -79,7 +73,7 @@ export default function AdminTechniciansPage() {
           className="gap-1.5 text-xs font-bold shadow-orange-glow"
         >
           <UserPlus className="h-4 w-4" />
-          Add New Technician
+          {t('addNewTechnician')}
         </Button>
       </PageHeader>
 
@@ -87,18 +81,18 @@ export default function AdminTechniciansPage() {
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between bg-white p-4 rounded-2xl border border-navy-100 shadow-sm">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy-400" />
+          <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-navy-400`} />
           <input
             type="text"
-            placeholder="Search by name, employee ID, or skill (e.g. NDT, Welding)..."
+            placeholder={t('searchTechnicianPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-9 pr-4 rounded-xl bg-navy-50/60 border border-navy-100 text-xs text-navy-900 placeholder:text-navy-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+            className={`w-full h-10 ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} rounded-xl bg-navy-50/60 border border-navy-100 text-xs text-navy-900 placeholder:text-navy-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all`}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700"
+              className={`absolute ${isRTL ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 text-navy-400 hover:text-navy-700`}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -107,7 +101,7 @@ export default function AdminTechniciansPage() {
 
         {/* Level Filters */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-xs font-bold text-navy-400 mr-1 hidden md:inline">Level:</span>
+          <span className="text-xs font-bold text-navy-400 mr-1 hidden md:inline">{t('level')}:</span>
           {['all', 'level_1', 'level_2', 'level_3'].map((lvl) => (
             <button
               key={lvl}
@@ -118,13 +112,7 @@ export default function AdminTechniciansPage() {
                   : 'bg-navy-50 text-navy-600 hover:bg-navy-100'
               }`}
             >
-              {lvl === 'all'
-                ? 'All Levels'
-                : lvl === 'level_1'
-                ? 'Level 1'
-                : lvl === 'level_2'
-                ? 'Level 2'
-                : 'Level 3 (Supervisor)'}
+              {lvl === 'all' ? t('allLevels') : lvl === 'level_1' ? 'Level 1' : lvl === 'level_2' ? 'Level 2' : 'Level 3'}
             </button>
           ))}
         </div>
@@ -135,11 +123,11 @@ export default function AdminTechniciansPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="h-10 px-3 rounded-xl bg-navy-50/60 border border-navy-100 text-xs font-semibold text-navy-800 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 cursor-pointer"
         >
-          <option value="all">All Statuses</option>
-          <option value="available">Available</option>
-          <option value="deployed">Deployed</option>
-          <option value="in_training">In Training</option>
-          <option value="on_leave">On Leave</option>
+          <option value="all">{t('allStatuses')}</option>
+          <option value="available">{t('available')}</option>
+          <option value="deployed">{t('deployed')}</option>
+          <option value="in_training">{t('inTraining')}</option>
+          <option value="on_leave">{t('onLeave')}</option>
         </select>
       </div>
 
@@ -150,10 +138,8 @@ export default function AdminTechniciansPage() {
             0
           </div>
           <div className="space-y-1">
-            <h3 className="text-lg font-bold text-navy-950">No Technicians in Roster</h3>
-            <p className="text-sm text-navy-500">
-              Your Supabase technicians directory is currently empty. Click &quot;Add New Technician&quot; to provision verified rope access personnel or run the seed migration.
-            </p>
+            <h3 className="text-lg font-bold text-navy-950">{t('noTechnicians')}</h3>
+            <p className="text-sm text-navy-500">{t('noTechniciansDesc')}</p>
           </div>
           <Button
             variant="primary"
@@ -161,7 +147,7 @@ export default function AdminTechniciansPage() {
             onClick={() => setIsAddModalOpen(true)}
           >
             <UserPlus className="h-4 w-4" />
-            Add First Technician
+            {t('addFirstTechnician')}
           </Button>
         </div>
       ) : (
@@ -195,14 +181,14 @@ export default function AdminTechniciansPage() {
 
             <CardContent className="space-y-3 pb-3 text-xs">
               <div className="flex items-center justify-between py-1.5 px-3 bg-navy-50/70 rounded-xl border border-navy-100/80">
-                <span className="text-navy-500 font-medium">IRATA Credential</span>
+                <span className="text-navy-500 font-medium">{t('irataCredential')}</span>
                 <IrataBadge level={tech.irata_level} />
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-navy-700">
                 <div className="p-2 bg-white rounded-lg border border-navy-100/80">
                   <span className="text-[10px] text-navy-400 font-semibold block uppercase">
-                    Rope Hours
+                    {t('ropeHours')}
                   </span>
                   <span className="font-black text-navy-950 text-sm">
                     {tech.total_rope_hours.toLocaleString()} hrs
@@ -210,7 +196,7 @@ export default function AdminTechniciansPage() {
                 </div>
                 <div className="p-2 bg-white rounded-lg border border-navy-100/80">
                   <span className="text-[10px] text-navy-400 font-semibold block uppercase">
-                    Daily Rate
+                    {t('dailyRate')}
                   </span>
                   <span className="font-black text-navy-950 text-sm">
                     {formatCurrency(tech.daily_rate_sar)}
@@ -221,7 +207,7 @@ export default function AdminTechniciansPage() {
               {/* Specialization Tags */}
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-navy-400 uppercase tracking-wider block">
-                  Specializations
+                  {t('specializations')}
                 </span>
                 <div className="flex flex-wrap gap-1">
                   {(tech.specializations || []).slice(0, 3).map((spec, i) => (
@@ -247,7 +233,7 @@ export default function AdminTechniciansPage() {
                 {tech.performance_rating} ({tech.rating_count} jobs)
               </span>
               <span className="text-navy-400 text-[11px]">
-                Available: {formatDate(tech.next_available_date)}
+                {t('availableFrom')}: {formatDate(tech.next_available_date)}
               </span>
             </div>
             </Card>
@@ -287,27 +273,27 @@ export default function AdminTechniciansPage() {
             {/* Key Information */}
             <div className="grid grid-cols-2 gap-3 text-xs bg-navy-50 p-4 rounded-2xl border border-navy-100">
               <div>
-                <span className="text-navy-400 block font-semibold">IRATA Number</span>
+                <span className="text-navy-400 block font-semibold">{t('irataNumber')}</span>
                 <span className="font-mono font-bold text-navy-900">{selectedTech.irata_membership_no}</span>
               </div>
               <div>
-                <span className="text-navy-400 block font-semibold">Total Rope Hours</span>
-                <span className="font-bold text-navy-900">{selectedTech.total_rope_hours} Verified Hours</span>
+                <span className="text-navy-400 block font-semibold">{t('totalRopeHoursVerified')}</span>
+                <span className="font-bold text-navy-900">{selectedTech.total_rope_hours} hrs</span>
               </div>
               <div>
-                <span className="text-navy-400 block font-semibold">Fatigue Score</span>
-                <span className="font-bold text-emerald-700">{selectedTech.fatigue_score} / 10 (Rest Normal)</span>
+                <span className="text-navy-400 block font-semibold">{t('fatigueScore')}</span>
+                <span className="font-bold text-emerald-700">{selectedTech.fatigue_score} / 10 ({t('fatigueNormal')})</span>
               </div>
               <div>
-                <span className="text-navy-400 block font-semibold">Daily Rate</span>
-                <span className="font-bold text-orange-600">{formatCurrency(selectedTech.daily_rate_sar)} / shift</span>
+                <span className="text-navy-400 block font-semibold">{t('dailyRate')}</span>
+                <span className="font-bold text-orange-600">{formatCurrency(selectedTech.daily_rate_sar)} / {t('perShift')}</span>
               </div>
             </div>
 
             {/* Specializations */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-navy-400">
-                Certified Skills & Specializations
+                {t('certifiedSkills')}
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {(selectedTech.specializations || []).map((spec, i) => (
@@ -334,7 +320,7 @@ export default function AdminTechniciansPage() {
                 </span>
               </div>
               <p className="text-navy-500 italic bg-white p-2.5 rounded-xl border border-navy-100">
-                Medical: {selectedTech.medical_notes}
+                {t('medical')}: {selectedTech.medical_notes}
               </p>
             </div>
 
@@ -379,7 +365,7 @@ export default function AdminTechniciansPage() {
                   }
                 }}
               >
-                Remove Account
+                {t('removeAccount')}
               </Button>
               <div className="flex-1 flex gap-2">
                 <Button
@@ -387,17 +373,17 @@ export default function AdminTechniciansPage() {
                   onClick={() => setSelectedTech(null)}
                   className="flex-1"
                 >
-                  Close
+                  {t('close')}
                 </Button>
                 <Button
                   variant="primary"
                   className="flex-1 shadow-orange-glow"
                   onClick={() => {
-                    toast.success(`Technician ${selectedTech.profile.full_name} assigned to active dispatch.`)
+                    toast.success(`${selectedTech.profile.full_name} ${t('assignToDeployment')}`)
                     setSelectedTech(null)
                   }}
                 >
-                  Assign to Deployment
+                  {t('assignToDeployment')}
                 </Button>
               </div>
             </div>
