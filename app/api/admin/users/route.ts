@@ -3,6 +3,7 @@ import {
   createAuthUser,
   adminUpsertProfile,
   adminInsertTechnician,
+  adminInsertOrganization,
 } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -35,25 +36,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 1. Create user in auth.users via Admin API
-    let newUserId = `usr-${Date.now()}`
+    // ── Step 1: Create user in Supabase Auth ──────────────────────────────────
     const authResult = await createAuthUser({
       email,
       password,
-      user_metadata: {
-        full_name: fullName,
-        role,
-        phone,
-      },
+      user_metadata: { full_name: fullName, role, phone },
     })
 
-    if (authResult.error) {
-      console.warn('[Admin Create User Auth Note]', authResult.error)
-    } else if (authResult.user?.id) {
-      newUserId = authResult.user.id
+    // If auth creation failed, we MUST stop — we cannot proceed without a real UUID
+    if (authResult.error || !authResult.user?.id) {
+      const errMsg = authResult.error || 'Auth user creation returned no user ID.'
+      console.error('[Admin Create User] Auth failed:', errMsg)
+      return NextResponse.json(
+        { error: `Failed to create auth account: ${errMsg}` },
+        { status: 500 }
+      )
     }
 
-    // 2. Upsert profile via Service Role (Bypasses RLS)
+    const newUserId: string = authResult.user.id
+
+    // ── Step 2: Upsert profile (uses real UUID from Auth) ─────────────────────
     await adminUpsertProfile({
       id: newUserId,
       role,
@@ -64,7 +66,7 @@ export async function POST(request: NextRequest) {
       onboarding_complete: true,
     })
 
-    // 3. If role is Technician, insert into technicians table via Service Role
+    // ── Step 3: Role-specific data ─────────────────────────────────────────────
     if (role === 'technician') {
       const empId = `PP-T${Math.floor(1000 + Math.random() * 9000)}`
       await adminInsertTechnician({
@@ -85,15 +87,20 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    if (role === 'client' && organizationName) {
+      await adminInsertOrganization({
+        name: organizationName,
+        industry_sector: industrySector || 'Oil & Gas',
+        city: city || 'Jubail',
+        primary_contact_id: newUserId,
+        is_active: true,
+      })
+    }
+
     return NextResponse.json({
       success: true,
-      user: {
-        id: newUserId,
-        email,
-        fullName,
-        role,
-      },
-      message: `Account created successfully with role ${role}.`,
+      user: { id: newUserId, email, fullName, role },
+      message: `Account created successfully with role: ${role}.`,
     })
   } catch (err: any) {
     console.error('[Admin Create User Exception]', err)
