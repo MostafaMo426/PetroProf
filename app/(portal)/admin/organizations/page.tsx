@@ -3,21 +3,15 @@
 import * as React from 'react'
 import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/ui/page-header'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import { CreateUserModal } from '@/components/admin/CreateUserModal'
 import {
   Building2,
   Trash2,
-  ShieldCheck,
-  Mail,
-  Phone,
   MapPin,
   Search,
-  Plus,
-  Users,
-  AlertTriangle,
   UserPlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,43 +29,11 @@ interface ClientAccount {
   createdAt: string
 }
 
-const MOCK_CLIENT_ACCOUNTS: ClientAccount[] = [
-  {
-    id: 'b1c2d3e4-0001-4000-8000-000000000010',
-    fullName: 'Eng. Khalid Al-Otaibi',
-    email: 'khalid.otaibi@aramco.com',
-    role: 'client',
-    organizationName: 'Saudi Aramco',
-    industry: 'Oil & Gas',
-    city: 'Dhahran',
-    createdAt: '2024-02-10',
-  },
-  {
-    id: 'b1c2d3e4-0002-4000-8000-000000000011',
-    fullName: 'Fahad Al-Malki',
-    email: 'fahad.malki@sabic.com',
-    role: 'client',
-    organizationName: 'SABIC HQ',
-    industry: 'Petrochemical',
-    city: 'Riyadh',
-    createdAt: '2024-04-18',
-  },
-  {
-    id: 'b1c2d3e4-0003-4000-8000-000000000012',
-    fullName: 'Capt. Robert Jenkins',
-    email: 'robert.jenkins@adesgroup.com',
-    role: 'client',
-    organizationName: 'ADES Offshore Drilling',
-    industry: 'Offshore Marine',
-    city: 'Al-Khobar',
-    createdAt: '2024-06-25',
-  },
-]
-
 export default function AdminOrganizationsPage() {
-  const [clients, setClients] = useState<ClientAccount[]>(MOCK_CLIENT_ACCOUNTS)
+  const [clients, setClients] = useState<ClientAccount[]>([])
   const [search, setSearch] = useState('')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   async function loadClientProfiles() {
     try {
@@ -96,9 +58,13 @@ export default function AdminOrganizationsPage() {
             createdAt: p.created_at.split('T')[0],
           }))
         )
+      } else {
+        setClients([])
       }
     } catch (err) {
-      // Fallback to initial mock list
+      setClients([])
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -109,7 +75,7 @@ export default function AdminOrganizationsPage() {
   const handleDeleteClient = async (client: ClientAccount) => {
     if (
       confirm(
-        `Are you sure you want to PERMANENTLY REMOVE the client account for ${client.fullName} (${client.organizationName})? This will revoke their portal access.`
+        `Are you sure you want to PERMANENTLY REMOVE the client account for ${client.fullName}? This will revoke their portal access.`
       )
     ) {
       const toastId = toast.loading(`Removing account for ${client.fullName}...`)
@@ -180,59 +146,81 @@ export default function AdminOrganizationsPage() {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table / Empty State */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-navy-50/75 border-b border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Contact Representative</th>
-                  <th className="py-3 px-4">Organization Name</th>
-                  <th className="py-3 px-4">Sector</th>
-                  <th className="py-3 px-4">Location</th>
-                  <th className="py-3 px-4">Registered Date</th>
-                  <th className="py-3 px-4 text-right">Admin Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-navy-50 font-medium">
-                {filteredClients.map((client) => (
-                  <tr key={client.id} className="hover:bg-navy-50/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <p className="font-bold text-navy-950">{client.fullName}</p>
-                      <p className="text-[11px] text-navy-400">{client.email}</p>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-orange-600">
-                      {client.organizationName}
-                    </td>
-                    <td className="py-3.5 px-4 text-navy-700">
-                      {client.industry}
-                    </td>
-                    <td className="py-3.5 px-4 text-navy-600">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3 text-navy-400 shrink-0" />
-                        {client.city}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-navy-500">
-                      {client.createdAt}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteClient(client)}
-                        className="text-xs h-7 px-2.5 font-bold gap-1"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Remove Account
-                      </Button>
-                    </td>
+          {filteredClients.length === 0 ? (
+            <div className="p-12 text-center space-y-4">
+              <div className="w-14 h-14 bg-navy-50 text-navy-400 rounded-2xl flex items-center justify-center mx-auto">
+                <Building2 className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-navy-950">No Client Accounts Registered</h3>
+                <p className="text-xs text-navy-500 max-w-sm mx-auto">
+                  Click &quot;Add Client / User Account&quot; to provision a new client organization.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => setIsAddModalOpen(true)}
+                className="gap-1.5 text-xs font-bold shadow-orange-glow"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add First Client Account
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-navy-50/75 border-b border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Contact Representative</th>
+                    <th className="py-3 px-4">Organization Name</th>
+                    <th className="py-3 px-4">Sector</th>
+                    <th className="py-3 px-4">Location</th>
+                    <th className="py-3 px-4">Registered Date</th>
+                    <th className="py-3 px-4 text-right">Admin Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-navy-50 font-medium">
+                  {filteredClients.map((client) => (
+                    <tr key={client.id} className="hover:bg-navy-50/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <p className="font-bold text-navy-950">{client.fullName}</p>
+                        <p className="text-[11px] text-navy-400">{client.email}</p>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-orange-600">
+                        {client.organizationName}
+                      </td>
+                      <td className="py-3.5 px-4 text-navy-700">
+                        {client.industry}
+                      </td>
+                      <td className="py-3.5 px-4 text-navy-600">
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-navy-400 shrink-0" />
+                          {client.city}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-navy-500">
+                        {client.createdAt}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteClient(client)}
+                          className="text-xs h-7 px-2.5 font-bold gap-1"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Remove Account
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
       {/* Create User Modal */}

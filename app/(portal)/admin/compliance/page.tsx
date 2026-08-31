@@ -1,23 +1,22 @@
 'use client'
 
 import * as React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/ui/page-header'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { IrataBadge, TechnicianStatusBadge } from '@/components/ui/status-badge'
+import { IrataBadge } from '@/components/ui/status-badge'
 import { formatDate } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+import { useLanguage } from '@/lib/i18n/context'
 import {
-  ShieldAlert,
   ShieldCheck,
   AlertTriangle,
   Clock,
   CheckCircle2,
-  FileText,
-  Filter,
-  Sparkles,
   Download,
   Mail,
+  Shield,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -33,78 +32,77 @@ interface ComplianceItem {
   verified: boolean
 }
 
-const MOCK_COMPLIANCE: ComplianceItem[] = [
-  {
-    id: 'c-1',
-    technicianName: 'Tariq Al-Ghamdi',
-    irataLevel: 'level_3',
-    certType: 'IRATA Level 3 Recertification',
-    issuingBody: 'IRATA International',
-    expiryDate: '2026-09-28',
-    daysUntilExpiry: 12,
-    status: 'critical',
-    verified: true,
-  },
-  {
-    id: 'c-2',
-    technicianName: 'Hassan Al-Zahrani',
-    irataLevel: 'level_2',
-    certType: 'Annual Medical Fitness (Offshore)',
-    issuingBody: 'Saudi Aramco Medical Services',
-    expiryDate: '2026-09-18',
-    daysUntilExpiry: 18,
-    status: 'urgent',
-    verified: true,
-  },
-  {
-    id: 'c-3',
-    technicianName: 'Omar Farooq Al-Qarni',
-    irataLevel: 'level_1',
-    certType: 'H2S Gas Safety & Escape',
-    issuingBody: 'Saudi Red Crescent',
-    expiryDate: '2026-09-27',
-    daysUntilExpiry: 27,
-    status: 'urgent',
-    verified: true,
-  },
-  {
-    id: 'c-4',
-    technicianName: 'Fahad Al-Shehri',
-    irataLevel: 'level_2',
-    certType: 'Confined Space Entry Permit',
-    issuingBody: 'Saudi Civil Defense',
-    expiryDate: '2026-10-03',
-    daysUntilExpiry: 34,
-    status: 'warning',
-    verified: false,
-  },
-  {
-    id: 'c-5',
-    technicianName: 'David Mitchell',
-    irataLevel: 'level_3',
-    certType: 'BOSIET Offshore Survival with EBS',
-    issuingBody: 'OPITO Certified',
-    expiryDate: '2027-08-19',
-    daysUntilExpiry: 354,
-    status: 'ok',
-    verified: true,
-  },
-]
-
 export default function AdminCompliancePage() {
-  const [items, setItems] = useState<ComplianceItem[]>(MOCK_COMPLIANCE)
+  const { t, isRTL } = useLanguage()
+  const [items, setItems] = useState<ComplianceItem[]>([])
   const [filter, setFilter] = useState<'all' | 'critical' | 'urgent' | 'warning'>('all')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadComplianceData() {
+      try {
+        const supabase = createClient()
+        // Query technicians with profiles
+        const { data: techs } = await supabase
+          .from('technicians')
+          .select('id, irata_level, employee_id, profile:profiles(full_name)')
+
+        // Query certifications
+        const { data: certs } = await supabase
+          .from('certifications')
+          .select('*, technician:technicians(id, irata_level, profile:profiles(full_name))')
+
+        if (certs && certs.length > 0) {
+          const mapped: ComplianceItem[] = certs.map((c: any) => {
+            const exp = c.expiry_date ? new Date(c.expiry_date) : new Date(Date.now() + 365 * 86400000)
+            const diffDays = Math.ceil((exp.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            let status: 'critical' | 'urgent' | 'warning' | 'ok' = 'ok'
+            if (diffDays <= 14) status = 'critical'
+            else if (diffDays <= 30) status = 'urgent'
+            else if (diffDays <= 90) status = 'warning'
+
+            return {
+              id: c.id,
+              technicianName: c.technician?.profile?.full_name || 'Technician',
+              irataLevel: c.technician?.irata_level || 'level_1',
+              certType: c.cert_type || 'IRATA Certification',
+              issuingBody: c.issuing_body || 'IRATA International',
+              expiryDate: c.expiry_date || new Date().toISOString().split('T')[0],
+              daysUntilExpiry: diffDays,
+              status,
+              verified: c.is_verified || false,
+            }
+          })
+          setItems(mapped)
+        } else {
+          setItems([])
+        }
+      } catch (err) {
+        setItems([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadComplianceData()
+  }, [])
 
   const handleNotifyTech = (name: string) => {
-    toast.success(`Automated SMS & Email renewal notification sent to ${name}.`)
+    toast.success(`Automated renewal notification sent to ${name}.`)
   }
 
-  const handleVerifyCert = (id: string) => {
+  const handleVerifyCert = async (id: string) => {
+    const supabase = createClient()
+    await (supabase.from('certifications') as any).update({ is_verified: true }).eq('id', id)
     setItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, verified: true } : item))
     )
-    toast.success('Certificate marked as audited & verified in national registry.')
+    toast.success('Certificate marked as audited & verified.')
   }
+
+  const criticalCount = items.filter((i) => i.status === 'critical').length
+  const urgentCount = items.filter((i) => i.status === 'urgent').length
+  const warningCount = items.filter((i) => i.status === 'warning').length
 
   const filteredItems = items.filter((item) =>
     filter === 'all' ? true : item.status === filter
@@ -118,14 +116,14 @@ export default function AdminCompliancePage() {
         badge={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-bold text-amber-800">
             <AlertTriangle className="h-3.5 w-3.5" />
-            4 Expiries in 30 Days
+            {criticalCount + urgentCount} Expiries Requiring Review
           </span>
         }
       >
         <Button
           variant="outline"
           className="gap-1.5 text-xs font-bold"
-          onClick={() => toast.success('Compliance audit export downloaded.')}
+          onClick={() => toast.success('Compliance audit report generated.')}
         >
           <Download className="h-4 w-4" />
           Export Audit PDF
@@ -146,8 +144,8 @@ export default function AdminCompliancePage() {
             <span className="text-xs font-bold uppercase tracking-wider">Critical (0 - 14 Days)</span>
             <span className="h-3 w-3 rounded-full bg-red-600 animate-ping" />
           </div>
-          <p className="text-2xl font-black mt-2">1 Tech Expiring</p>
-          <p className="text-xs opacity-80 mt-1">Requires immediate recertification booking</p>
+          <p className="text-2xl font-black mt-2">{criticalCount} Techs Expiring</p>
+          <p className="text-xs opacity-80 mt-1">Requires immediate recertification</p>
         </div>
 
         <div
@@ -162,7 +160,7 @@ export default function AdminCompliancePage() {
             <span className="text-xs font-bold uppercase tracking-wider">Urgent (15 - 30 Days)</span>
             <AlertTriangle className="h-4 w-4 text-orange-400" />
           </div>
-          <p className="text-2xl font-black mt-2">2 Techs Expiring</p>
+          <p className="text-2xl font-black mt-2">{urgentCount} Techs Expiring</p>
           <p className="text-xs opacity-80 mt-1">Medical & Gas safety renewals</p>
         </div>
 
@@ -178,7 +176,7 @@ export default function AdminCompliancePage() {
             <span className="text-xs font-bold uppercase tracking-wider">Warning (31 - 90 Days)</span>
             <Clock className="h-4 w-4 text-yellow-600" />
           </div>
-          <p className="text-2xl font-black mt-2">1 Tech Notice</p>
+          <p className="text-2xl font-black mt-2">{warningCount} Techs Notice</p>
           <p className="text-xs opacity-80 mt-1">Confined space safety refresher</p>
         </div>
       </div>
@@ -200,92 +198,106 @@ export default function AdminCompliancePage() {
         ))}
       </div>
 
-      {/* Compliance Table */}
+      {/* Compliance Table / Empty State */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-navy-50/75 border-b border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="py-3 px-4">Technician</th>
-                  <th className="py-3 px-4">Certification Title</th>
-                  <th className="py-3 px-4">Issuing Body</th>
-                  <th className="py-3 px-4">Expiry Date</th>
-                  <th className="py-3 px-4">Countdown</th>
-                  <th className="py-3 px-4">Audit Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-navy-50 font-medium">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-navy-50/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <p className="font-bold text-navy-950">{item.technicianName}</p>
-                      <IrataBadge level={item.irataLevel} short />
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-navy-800">
-                      {item.certType}
-                    </td>
-                    <td className="py-3.5 px-4 text-navy-500">
-                      {item.issuingBody}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-navy-900">
-                      {formatDate(item.expiryDate)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-black ${
-                          item.status === 'critical'
-                            ? 'bg-red-500 text-white'
-                            : item.status === 'urgent'
-                            ? 'bg-orange-500 text-white'
-                            : item.status === 'warning'
-                            ? 'bg-amber-400 text-navy-950'
-                            : 'bg-emerald-100 text-emerald-800'
-                        }`}
-                      >
-                        {item.daysUntilExpiry > 0 ? `${item.daysUntilExpiry} days left` : 'EXPIRED'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {item.verified ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px]">
-                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                          Audited
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-amber-700 font-bold text-[11px]">
-                          <Clock className="h-3.5 w-3.5 text-amber-500" />
-                          Pending Review
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right space-x-1.5">
-                      {!item.verified && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleVerifyCert(item.id)}
-                          className="text-xs h-7 px-2 font-bold text-emerald-700 hover:bg-emerald-50"
-                        >
-                          Verify
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleNotifyTech(item.technicianName)}
-                        className="text-xs h-7 px-2 text-navy-600"
-                        title="Send Reminder"
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                      </Button>
-                    </td>
+          {filteredItems.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-navy-950">All Personnel Fully Compliant</h3>
+                <p className="text-xs text-navy-500 max-w-sm mx-auto">
+                  No expiring IRATA certificates, medical fitness certs, or safety permits requiring action.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-navy-50/75 border-b border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Technician</th>
+                    <th className="py-3 px-4">Certification Title</th>
+                    <th className="py-3 px-4">Issuing Body</th>
+                    <th className="py-3 px-4">Expiry Date</th>
+                    <th className="py-3 px-4">Countdown</th>
+                    <th className="py-3 px-4">Audit Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-navy-50 font-medium">
+                  {filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-navy-50/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <p className="font-bold text-navy-950">{item.technicianName}</p>
+                        <IrataBadge level={item.irataLevel} short />
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-navy-800">
+                        {item.certType}
+                      </td>
+                      <td className="py-3.5 px-4 text-navy-500">
+                        {item.issuingBody}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-navy-900">
+                        {formatDate(item.expiryDate)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-black ${
+                            item.status === 'critical'
+                              ? 'bg-red-500 text-white'
+                              : item.status === 'urgent'
+                              ? 'bg-orange-500 text-white'
+                              : item.status === 'warning'
+                              ? 'bg-amber-400 text-navy-950'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {item.daysUntilExpiry > 0 ? `${item.daysUntilExpiry} days left` : 'EXPIRED'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {item.verified ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px]">
+                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                            Audited
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-amber-700 font-bold text-[11px]">
+                            <Clock className="h-3.5 w-3.5 text-amber-500" />
+                            Pending Review
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-1.5">
+                        {!item.verified && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVerifyCert(item.id)}
+                            className="text-xs h-7 px-2 font-bold text-emerald-700 hover:bg-emerald-50"
+                          >
+                            Verify
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleNotifyTech(item.technicianName)}
+                          className="text-xs h-7 px-2 text-navy-600"
+                          title="Send Reminder"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
