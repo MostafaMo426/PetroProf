@@ -1,16 +1,18 @@
 'use client'
 
+import * as React from 'react'
+import { useState, useEffect } from 'react'
 import { PageHeader } from "@/components/ui/page-header"
 import { MetricCard } from "@/components/ui/metric-card"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { IrataBadge } from "@/components/ui/status-badge"
 import { useLanguage } from "@/lib/i18n/context"
+import { createClient } from "@/lib/supabase/client"
 import {
   Clock,
   Award,
   QrCode,
-  Sparkles,
   ShieldCheck,
   CheckCircle2,
   ArrowUpRight,
@@ -20,72 +22,40 @@ import Link from "next/link"
 
 export default function TechnicianDashboardPage() {
   const { t, isRTL } = useLanguage()
+  const [logbookEntries, setLogbookEntries] = useState<any[]>([])
+  const [totalHours, setTotalHours] = useState(0)
+  const [loading, setLoading] = useState(true)
 
-  const logbookEntries = [
-    {
-      dateEn: "Aug 29, 2026",
-      dateAr: "29 أغسطس 2026",
-      siteEn: "Ras Tanura Flare Stack #3",
-      siteAr: "برج الشعلة #3 - رأس تنورة",
-      scopeEn: "NDT Ultrasonic Thickness Testing on riser welds",
-      scopeAr: "فحص سماكة اللحامات بالموجات فوق الصوتية NDT",
-      hours: "8.5 hrs",
-      supervisorEn: "Tariq Al-Ghamdi (L3)",
-      supervisorAr: "طارق الغامدي (L3)",
-      status: "pending",
-    },
-    {
-      dateEn: "Aug 28, 2026",
-      dateAr: "28 أغسطس 2026",
-      siteEn: "Ras Tanura Flare Stack #3",
-      siteAr: "برج الشعلة #3 - رأس تنورة",
-      scopeEn: "Rigging dual line system & anchor bolt inspection",
-      scopeAr: "تركيب نظام الحبال المزدوج وفحص مراسي التثبيت",
-      hours: "7.0 hrs",
-      supervisorEn: "Tariq Al-Ghamdi (L3)",
-      supervisorAr: "طارق الغامدي (L3)",
-      status: "verified",
-    },
-    {
-      dateEn: "Aug 24, 2026",
-      dateAr: "24 أغسطس 2026",
-      siteEn: "SABIC Digital City HQ",
-      siteAr: "مقر سابك - المدينة الرقمية",
-      scopeEn: "Glazing sealant renewal & structural bracket torque check",
-      scopeAr: "تجديد مواد العزل الزجاجي وفحص عزم ربط الأقواس",
-      hours: "9.0 hrs",
-      supervisorEn: "Mansour Al-Harbi (L3)",
-      supervisorAr: "منصور الحربي (L3)",
-      status: "verified",
-    },
-  ]
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        setLoading(false)
+        return
+      }
 
-  const certDocs = [
-    {
-      nameEn: "IRATA Level 2 Certificate",
-      nameAr: "شهادة IRATA المستوى 2",
-      bodyEn: "IRATA Int.",
-      bodyAr: "IRATA الدولي",
-      expEn: "Dec 2026",
-      expAr: "ديسمبر 2026",
-    },
-    {
-      nameEn: "Offshore Medical Fitness",
-      nameAr: "شهادة اللياقة الطبية البحرية",
-      bodyEn: "Aramco Approved",
-      bodyAr: "معتمد أرامكو",
-      expEn: "Apr 2027",
-      expAr: "أبريل 2027",
-    },
-    {
-      nameEn: "H2S Awareness & Escape",
-      nameAr: "السلامة من غاز H2S والإخلاء",
-      bodyEn: "Saudi Civil Defense",
-      bodyAr: "الدفاع المدني السعودي",
-      expEn: "Nov 2026",
-      expAr: "نوفمبر 2026",
-    },
-  ]
+      // Fetch technician info
+      const { data: tech }: { data: any } = await supabase
+        .from('technicians')
+        .select('*')
+        .eq('profile_id', user.id)
+        .maybeSingle()
+
+      if (tech) {
+        setTotalHours(Number(tech.total_rope_hours) || 0)
+        // Fetch recent logbook entries
+        const { data: logs } = await supabase
+          .from('logbook_entries')
+          .select('*')
+          .eq('technician_id', tech.id)
+          .order('work_date', { ascending: false })
+          .limit(5)
+
+        if (logs) setLogbookEntries(logs)
+      }
+      setLoading(false)
+    })
+  }, [])
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -113,12 +83,12 @@ export default function TechnicianDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title={t('totalRopeHours')}
-          value="1,248 hrs"
-          subtitle={t('hoursToLevel3')}
+          value={`${totalHours} hrs`}
+          subtitle={`${Math.max(0, 1500 - totalHours)} hrs to IRATA L3`}
           icon={Clock}
           iconBg="bg-orange-50"
           iconColor="text-orange-600"
-          badge={{ text: "83% to L3", variant: "orange" }}
+          badge={{ text: "Target: 1,500 hrs", variant: "orange" }}
         />
         <MetricCard
           title={t('availabilityStatus')}
@@ -127,12 +97,12 @@ export default function TechnicianDashboardPage() {
           icon={CheckCircle2}
           iconBg="bg-emerald-50"
           iconColor="text-emerald-600"
-          badge={{ text: `${t('fatigueScore')}: 0.8`, variant: "success" }}
+          badge={{ text: "Active", variant: "success" }}
         />
         <MetricCard
           title={t('irataCert')}
-          value="142 Days"
-          subtitle={t('validUntil')}
+          value="IRATA Level 2"
+          subtitle="Valid & Verified"
           icon={Award}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -140,12 +110,12 @@ export default function TechnicianDashboardPage() {
         />
         <MetricCard
           title={t('pendingQrSignoffs')}
-          value="1"
-          subtitle={t('pendingQrDesc')}
+          value={`${logbookEntries.filter((l) => !l.is_verified).length}`}
+          subtitle="Awaiting Supervisor Sign-off"
           icon={QrCode}
           iconBg="bg-purple-50"
           iconColor="text-purple-600"
-          badge={{ text: t('awaitingL3'), variant: "warning" }}
+          badge={{ text: "QR Sync", variant: "warning" }}
         />
       </div>
 
@@ -167,49 +137,63 @@ export default function TechnicianDashboardPage() {
             </Link>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className={`w-full text-xs ${isRTL ? 'text-right' : 'text-left'}`}>
-                <thead className="bg-navy-50/75 border-y border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4">{t('dateSite')}</th>
-                    <th className="py-3 px-4">{t('workScope')}</th>
-                    <th className="py-3 px-4">{t('hours')}</th>
-                    <th className="py-3 px-4">{t('supervisor')}</th>
-                    <th className="py-3 px-4">{t('verification')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-navy-50 font-medium">
-                  {logbookEntries.map((entry, idx) => (
-                    <tr key={idx} className="hover:bg-navy-50/40 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <p className="font-bold text-navy-950">{isRTL ? entry.siteAr : entry.siteEn}</p>
-                        <p className="text-[11px] text-navy-400">{isRTL ? entry.dateAr : entry.dateEn}</p>
-                      </td>
-                      <td className="py-3.5 px-4 text-navy-600 max-w-xs truncate">
-                        {isRTL ? entry.scopeAr : entry.scopeEn}
-                      </td>
-                      <td className="py-3.5 px-4 font-black text-navy-950">{entry.hours}</td>
-                      <td className="py-3.5 px-4 text-navy-700">
-                        {isRTL ? entry.supervisorAr : entry.supervisorEn}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {entry.status === "verified" ? (
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <CheckCircle2 className="h-3 w-3" />
-                            {t('qrVerified')}
-                          </span>
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <Clock className="h-3 w-3" />
-                            {t('pendingSignoff')}
-                          </span>
-                        )}
-                      </td>
+            {logbookEntries.length === 0 ? (
+              <div className="p-10 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-navy-50 text-navy-400 flex items-center justify-center mx-auto">
+                  <Clock className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold text-navy-900">No Logbook Entries Yet</p>
+                  <p className="text-xs text-navy-500">Log your first verified rope hours on project sites.</p>
+                </div>
+                <Link href="/technician/logbook">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs font-bold mt-2">
+                    <Plus className="h-3.5 w-3.5" />
+                    {t('logWorkHours')}
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className={`w-full text-xs ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <thead className="bg-navy-50/75 border-y border-navy-100 text-navy-400 font-bold uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">{t('dateSite')}</th>
+                      <th className="py-3 px-4">{t('workScope')}</th>
+                      <th className="py-3 px-4">{t('hours')}</th>
+                      <th className="py-3 px-4">{t('verification')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-navy-50 font-medium">
+                    {logbookEntries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-navy-50/40 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <p className="font-bold text-navy-950">{entry.site_name || 'Project Site'}</p>
+                          <p className="text-[11px] text-navy-400">{entry.work_date}</p>
+                        </td>
+                        <td className="py-3.5 px-4 text-navy-600 max-w-xs truncate">
+                          {entry.task_description || 'Rope access operations'}
+                        </td>
+                        <td className="py-3.5 px-4 font-black text-navy-950">{entry.hours_logged} hrs</td>
+                        <td className="py-3.5 px-4">
+                          {entry.is_verified ? (
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                              <CheckCircle2 className="h-3 w-3" />
+                              {t('qrVerified')}
+                            </span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                              <Clock className="h-3 w-3" />
+                              {t('pendingSignoff')}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -226,31 +210,24 @@ export default function TechnicianDashboardPage() {
             <div className="p-4 rounded-xl bg-navy-gradient text-white space-y-2">
               <div className={`flex justify-between items-center text-xs ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <span className="text-navy-300 font-semibold">{t('irataLevel3Prerequisite')}</span>
-                <span className="font-bold text-orange-400">1,248 / 1,500 hrs</span>
+                <span className="font-bold text-orange-400">{totalHours} / 1,500 hrs</span>
               </div>
               <div className="h-2 w-full rounded-full bg-navy-800 overflow-hidden">
-                <div className="h-full rounded-full bg-orange-gradient" style={{ width: "83.2%" }} />
+                <div
+                  className="h-full rounded-full bg-orange-gradient transition-all"
+                  style={{ width: `${Math.min(100, (totalHours / 1500) * 100)}%` }}
+                />
               </div>
               <p className="text-[10px] text-navy-300">{t('level3RequirementDesc')}</p>
             </div>
 
-            {/* Certs List */}
-            <div className="space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-navy-400">{t('activeDocuments')}</p>
-              {certDocs.map((cert, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-lg bg-navy-50/70 border border-navy-100 flex items-center justify-between text-xs"
-                >
-                  <div className={`space-y-0.5 ${isRTL ? 'text-right' : ''}`}>
-                    <p className="font-bold text-navy-950">{isRTL ? cert.nameAr : cert.nameEn}</p>
-                    <p className="text-[10px] text-navy-400">
-                      {isRTL ? cert.bodyAr : cert.bodyEn} • {t('exp')}: {isRTL ? cert.expAr : cert.expEn}
-                    </p>
-                  </div>
-                  <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                </div>
-              ))}
+            {/* Upload CTA */}
+            <div className="p-4 rounded-xl bg-navy-50 border border-navy-100 space-y-2 text-xs">
+              <div className="flex items-center gap-2 font-bold text-navy-900">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                IRATA & Medical Documents
+              </div>
+              <p className="text-navy-500 text-[11px]">Upload your certificate scans to extract verification codes automatically via AI OCR.</p>
             </div>
           </CardContent>
           <div className="p-4 border-t border-navy-100 bg-navy-50/30">
